@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "customFields": [
+    {
+      "key": "project",
+      "label": "Project",
+      "type": "select",
+      "options": [
+        "GBX-P1",
+        "GBX-P2",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "scope": "both",
+      "description": "Project code / assignment used for policy or reporting."
+    },
+    {
+      "key": "location",
+      "label": "Location",
+      "type": "select",
+      "options": [
+        "Chennai",
+        "Bangalore",
+        "Hyderabad",
+        "Pune"
+      ],
+      "scope": "both",
+      "description": "Employee base location (can be used for per-diem/allowances)."
+    },
+    {
+      "key": "profit_center",
+      "label": "Profit Center",
+      "type": "select",
+      "options": [
+        "PC-10",
+        "PC-12",
+        "PC-20"
+      ],
+      "scope": "both",
+      "description": "Finance reporting structure (common in SAP)."
+    },
+    {
+      "key": "work_location_type",
+      "label": "Work Location Type",
+      "type": "select",
+      "options": [
+        "Office",
+        "Remote",
+        "Hybrid"
+      ],
+      "scope": "both",
+      "description": "Used for mileage/travel eligibility rules."
+    },
+    {
+      "key": "per_diem_group",
+      "label": "Per Diem Group",
+      "type": "select",
+      "options": [
+        "Tier-1",
+        "Tier-2",
+        "Tier-3"
+      ],
+      "scope": "both",
+      "description": "Used for per-diem caps by tier/city."
+    },
+    {
+      "key": "expense_policy_group",
+      "label": "Expense Policy Group",
+      "type": "select",
+      "options": [
+        "Domestic-IN",
+        "International",
+        "Sales-HighTravel"
+      ],
+      "scope": "both",
+      "description": "Simple policy assignment key."
+    },
+    {
+      "key": "cash_advance_allowed",
+      "label": "Cash Advance Allowed",
+      "type": "boolean",
+      "scope": "both",
+      "description": "Eligibility flag for cash advance."
+    }
+  ]
+}

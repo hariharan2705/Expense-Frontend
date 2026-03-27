@@ -1,0 +1,143 @@
+/* CONTAINER */
+.sf-container {
+    padding: 20px;
+    background: #f8fafc;
+    min-height: 100vh;
+    font-family: "Inter", sans-serif;
+}
+
+/* HEADER */
+.sf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.sf-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.sf-sub {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* ACTIONS */
+.sf-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sf-actions button {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.sf-actions button:hover {
+    background: #f1f5f9;
+}
+
+/* SEARCH */
+.sf-search {
+    margin-bottom: 12px;
+}
+
+.sf-search input {
+    width: 320px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    outline: none;
+    transition: 0.2s;
+}
+
+.sf-search input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* TABLE */
+.sf-table {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* ROW */
+.sf-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.sf-row:hover {
+    background: #f8fafc;
+}
+
+/* HEADER ROW */
+.sf-head {
+    font-weight: 600;
+    background: #f9fafb;
+    cursor: default;
+}
+
+/* BODY */
+.sf-body {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+/* LINK */
+.sf-link {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.sf-link:hover {
+    text-decoration: underline;
+}
+
+/* MENU */
+.sf-menu {
+    margin-left: auto;
+    font-size: 18px;
+    color: #64748b;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.sf-menu:hover {
+    background: #e2e8f0;
+}
+
+/* CHECKBOX */
+.sf-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* SCROLLBAR */
+.sf-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sf-body::-webkit-scrollbar-thumb {
+    background: #cbd5f5;
+    border-radius: 10px;
+}

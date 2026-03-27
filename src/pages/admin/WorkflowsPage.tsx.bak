@@ -1,0 +1,146 @@
+import { useEffect, useMemo, useState } from "react";
+import { Button, Form, Input, Modal, Popconfirm, Space, Table, Tag, message } from "antd";
+import api from "../../lib/api";
+
+type Row = { id: string; name: string; appliesTo: string; status: string; definition: any };
+
+export default function WorkflowsPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [form] = Form.useForm();
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/api/workflows");
+      setRows(res.data.items || []);
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Failed to load workflows");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const showAdd = () => {
+    setEditing(null);
+    form.resetFields();
+    form.setFieldsValue({
+      status: "ACTIVE",
+      appliesTo: "EXPENSE_CLAIM",
+      definitionJson: "{\n  \"steps\": []\n}"
+    });
+    setOpen(true);
+  };
+
+  const showEdit = (r: Row) => {
+    setEditing(r);
+    form.resetFields();
+    form.setFieldsValue({
+      name: r.name,
+      status: r.status || "ACTIVE",
+      appliesTo: r.appliesTo,
+      definitionJson: JSON.stringify(r.definition || {}, null, 2),
+    });
+    setOpen(true);
+  };
+
+  const save = async () => {
+    const v = await form.validateFields();
+    const payload = {
+      name: v.name,
+      status: v.status || "ACTIVE",
+      appliesTo: v.appliesTo,
+      definition: JSON.parse(v.definitionJson || "{}"),
+    };
+    try {
+      if (editing) {
+        await api.put(`/api/workflows/${editing.id}`, payload);
+        message.success("Workflow updated");
+      } else {
+        await api.post(`/api/workflows`, payload);
+        message.success("Workflow created");
+      }
+      setOpen(false);
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Save failed");
+    }
+  };
+
+  const del = async (id: string) => {
+    try {
+      await api.delete(`/api/workflows/${id}`);
+      message.success("Deleted");
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Delete failed");
+    }
+  };
+
+  const columns = useMemo(() => [
+    { title: "Name", dataIndex: "name" },
+    { title: "Applies To", dataIndex: "appliesTo" },
+    { title: "Status", dataIndex: "status", render: (v: string) => <Tag color={v === "ACTIVE" ? "green" : "red"}>{v}</Tag> },
+    {
+      title: "Actions",
+      render: (_: any, r: Row) => (
+        <Space>
+          <Button size="small" onClick={() => showEdit(r)}>Edit</Button>
+          <Popconfirm title="Delete workflow?" onConfirm={() => del(r.id)}>
+            <Button size="small" danger>Delete</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ], []);
+
+  return (
+    <>
+      <Space style={{ marginBottom: 12 }}>
+        <Button type="primary" onClick={showAdd}>Add Workflow</Button>
+        <Button onClick={load}>Refresh</Button>
+      </Space>
+
+      <Table rowKey="id" loading={loading} dataSource={rows} columns={columns as any} />
+
+      <Modal
+        open={open}
+        title={editing ? "Edit Workflow" : "Add Workflow"}
+        onCancel={() => setOpen(false)}
+        onOk={save}
+        okText={editing ? "Update" : "Create"}
+        width={780}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="appliesTo" label="Applies To" rules={[{ required: true }]}>
+            <Input placeholder="EXPENSE_CLAIM" />
+          </Form.Item>
+          <Form.Item name="status" label="Status">
+            <Input placeholder="ACTIVE / INACTIVE" />
+          </Form.Item>
+          <Form.Item
+            name="definitionJson"
+            label="Definition (JSON)"
+            rules={[
+              {
+                validator: async (_, value) => {
+                  try { JSON.parse(value || "{}"); return Promise.resolve(); }
+                  catch { return Promise.reject(new Error("Invalid JSON")); }
+                }
+              }
+            ]}
+          >
+            <Input.TextArea rows={10} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+}

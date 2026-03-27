@@ -1,0 +1,136 @@
+import { useEffect, useMemo, useState } from "react";
+import { Button, Form, Input, Modal, Popconfirm, Space, Table, Tag, message } from "antd";
+import api from "../../lib/api";
+
+type Row = { id: string; name: string; status: string; rules: any };
+
+export default function PoliciesPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [form] = Form.useForm();
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/api/policies");
+      setRows(res.data.items || []);
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Failed to load policies");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const showAdd = () => {
+    setEditing(null);
+    form.resetFields();
+    form.setFieldsValue({ status: "ACTIVE", rulesJson: "{\n  \"rules\": []\n}" });
+    setOpen(true);
+  };
+
+  const showEdit = (r: Row) => {
+    setEditing(r);
+    form.resetFields();
+    form.setFieldsValue({
+      name: r.name,
+      status: r.status || "ACTIVE",
+      rulesJson: JSON.stringify(r.rules || {}, null, 2),
+    });
+    setOpen(true);
+  };
+
+  const save = async () => {
+    const v = await form.validateFields();
+    const payload = {
+      name: v.name,
+      status: v.status || "ACTIVE",
+      rules: JSON.parse(v.rulesJson || "{}"),
+    };
+    try {
+      if (editing) {
+        await api.put(`/api/policies/${editing.id}`, payload);
+        message.success("Policy updated");
+      } else {
+        await api.post(`/api/policies`, payload);
+        message.success("Policy created");
+      }
+      setOpen(false);
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Save failed");
+    }
+  };
+
+  const del = async (id: string) => {
+    try {
+      await api.delete(`/api/policies/${id}`);
+      message.success("Deleted");
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Delete failed");
+    }
+  };
+
+  const columns = useMemo(() => [
+    { title: "Name", dataIndex: "name" },
+    { title: "Status", dataIndex: "status", render: (v: string) => <Tag color={v === "ACTIVE" ? "green" : "red"}>{v}</Tag> },
+    {
+      title: "Actions",
+      render: (_: any, r: Row) => (
+        <Space>
+          <Button size="small" onClick={() => showEdit(r)}>Edit</Button>
+          <Popconfirm title="Delete policy?" onConfirm={() => del(r.id)}>
+            <Button size="small" danger>Delete</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ], []);
+
+  return (
+    <>
+      <Space style={{ marginBottom: 12 }}>
+        <Button type="primary" onClick={showAdd}>Add Policy</Button>
+        <Button onClick={load}>Refresh</Button>
+      </Space>
+
+      <Table rowKey="id" loading={loading} dataSource={rows} columns={columns as any} />
+
+      <Modal
+        open={open}
+        title={editing ? "Edit Policy" : "Add Policy"}
+        onCancel={() => setOpen(false)}
+        onOk={save}
+        okText={editing ? "Update" : "Create"}
+        width={760}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="status" label="Status">
+            <Input placeholder="ACTIVE / INACTIVE" />
+          </Form.Item>
+          <Form.Item
+            name="rulesJson"
+            label="Rules (JSON)"
+            rules={[
+              {
+                validator: async (_, value) => {
+                  try { JSON.parse(value || "{}"); return Promise.resolve(); }
+                  catch { return Promise.reject(new Error("Invalid JSON")); }
+                }
+              }
+            ]}
+          >
+            <Input.TextArea rows={10} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+}

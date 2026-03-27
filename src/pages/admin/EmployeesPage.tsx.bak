@@ -1,0 +1,646 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  Collapse,
+  Divider,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+  Tag,
+  message,
+  Select,
+  Switch,
+} from "antd";
+import api from "../../lib/api";
+
+// ✅ Put this JSON in: src/config/employeeCustomFields.json (Vite supports JSON imports)
+import employeeCustomFields from "../../config/employeeCustomFields.json";
+
+type Emp = {
+  id: string;
+  email: string;
+  name: string;
+
+  // existing columns
+  department?: string;
+  grade?: string;
+  mobile?: string;
+  managerId?: string;
+  status?: string;
+
+  // ✅ new "real columns" (v1)
+  employeeCode?: string;
+  designation?: string;
+  costCenter?: string;
+  sbu?: string;
+  branch?: string;
+  legalEntity?: string;
+  companyCode?: string;
+  employmentType?: string;
+  jobLevel?: string;
+
+  // jsonb
+  customFields?: Record<string, any>;
+};
+
+type UserItem = {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  employeeId?: string;
+  employeeName?: string;
+};
+
+const COLUMN_OPTIONS = {
+  employmentType: ["Permanent", "Contractor", "Intern"],
+  // ✅ Master data lists (v1). Keep these in sync with workflow/policy pickers.
+  department: ["IT", "Finance", "HR", "Sales", "Operations"],
+  designation: [
+    "Intern",
+    "Analyst",
+    "Senior Analyst",
+    "Lead",
+    "Assistant Manager",
+    "Manager",
+    "Senior Manager",
+    "Director",
+    "VP",
+  ],
+  grade: ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10"],
+  jobLevel: ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"],
+  sbu: ["IT", "Finance", "HR", "Sales", "Operations"],
+  branch: ["Chennai", "Bangalore", "Hyderabad", "Pune"],
+  companyCode: ["IN01", "IN02", "US01", "EU01"],
+  legalEntity: ["Globex India Pvt Ltd", "Acme India Pvt Ltd"],
+  costCenter: ["CC-1001", "CC-1002", "CC-2001", "CC-3001"],
+};
+
+function normEmail(s?: string) {
+  return (s || "").toLowerCase().trim();
+}
+
+export default function EmployeesPage() {
+  const [rows, setRows] = useState<Emp[]>([]);
+
+  const [managerUsers, setManagerUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Emp | null>(null);
+  const [form] = Form.useForm();
+
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginFor, setLoginFor] = useState<Emp | null>(null);
+  const [loginForm] = Form.useForm();
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/api/employees");
+      setRows(res.data.items || []);
+
+      // Managers list comes from /api/users (tenant admin only)
+      // We treat any non-EMPLOYEE role as eligible for "manager selection".
+      try {
+        const ures = await api.get("/api/users");
+        const all: UserItem[] = ures.data.items || [];
+        const mgrs = all.filter(
+          (u) =>
+            String(u.role || "").toUpperCase() !== "EMPLOYEE" &&
+            String(u.status || "").toUpperCase() === "ACTIVE" &&
+            !!u.employeeId
+        );
+        setManagerUsers(mgrs);
+      } catch (e2: any) {
+        // don't block employee list if users endpoint fails
+        console.warn("Failed to load users for manager dropdown", e2);
+        setManagerUsers([]);
+      }
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Failed to load employees");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const showCreateLogin = (r: Emp) => {
+    setLoginFor(r);
+    loginForm.resetFields();
+    loginForm.setFieldsValue({ email: r.email, role: "EMPLOYEE", status: "ACTIVE" });
+    setLoginOpen(true);
+  };
+
+  const createLogin = async () => {
+    const v = await loginForm.validateFields();
+    try {
+      await api.post("/api/users", {
+        email: v.email,
+        password: v.password,
+        role: v.role,
+        status: v.status,
+      });
+      message.success("Login created for employee");
+      setLoginOpen(false);
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Create login failed");
+    }
+  };
+
+  const showAdd = () => {
+    setEditing(null);
+    form.resetFields();
+    form.setFieldsValue({
+      status: "ACTIVE",
+      customFields: {},
+      advancedCustomFieldsJson: "{}",
+      cashAdvanceAllowedSwitch: false,
+    });
+    setOpen(true);
+  };
+
+  const showEdit = (r: Emp) => {
+    setEditing(r);
+    form.resetFields();
+
+    const cf = r.customFields || {};
+
+    form.setFieldsValue({
+      email: r.email,
+      name: r.name,
+      department: r.department || "",
+      grade: r.grade || "",
+      mobile: r.mobile || "",
+      managerId: r.managerId || "",
+      status: r.status || "ACTIVE",
+
+      employeeCode: r.employeeCode || "",
+      designation: r.designation || "",
+      costCenter: r.costCenter || "",
+      sbu: r.sbu || "",
+      branch: r.branch || "",
+      legalEntity: r.legalEntity || "",
+      companyCode: r.companyCode || "",
+      employmentType: r.employmentType || "",
+      jobLevel: r.jobLevel || "",
+
+      customFields: cf,
+      advancedCustomFieldsJson: JSON.stringify(cf || {}, null, 2),
+      cashAdvanceAllowedSwitch: !!cf.cash_advance_allowed,
+    });
+
+    setOpen(true);
+  };
+
+  const save = async () => {
+    const v = await form.validateFields();
+
+    // Merge customFields with advanced JSON (advanced wins)
+    let advanced: Record<string, any> = {};
+    try {
+      advanced = JSON.parse(v.advancedCustomFieldsJson || "{}");
+    } catch {
+      // validator already handles
+    }
+
+    const customFields = {
+      ...(v.customFields || {}),
+      ...advanced,
+      // keep boolean switch consistent
+      cash_advance_allowed: !!v.cashAdvanceAllowedSwitch,
+    };
+
+    const payload: any = {
+      email: v.email,
+      name: v.name,
+
+      department: v.department || "",
+      grade: v.grade || "",
+      mobile: v.mobile || "",
+      managerId: v.managerId || "",
+      status: v.status || "ACTIVE",
+
+      // ✅ new columns
+      employeeCode: v.employeeCode || "",
+      designation: v.designation || "",
+      costCenter: v.costCenter || "",
+      sbu: v.sbu || "",
+      branch: v.branch || "",
+      legalEntity: v.legalEntity || "",
+      companyCode: v.companyCode || "",
+      employmentType: v.employmentType || "",
+      jobLevel: v.jobLevel || "",
+
+      // jsonb
+      customFields,
+    };
+
+    try {
+      if (editing) {
+        await api.put(`/api/employees/${editing.id}`, payload);
+        message.success("Employee updated");
+      } else {
+        await api.post(`/api/employees`, payload);
+        message.success("Employee created");
+      }
+      setOpen(false);
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Save failed");
+    }
+  };
+
+  const del = async (id: string) => {
+    try {
+      await api.delete(`/api/employees/${id}`);
+      message.success("Deleted");
+      load();
+    } catch (e: any) {
+      message.error(e?.response?.data?.error || "Delete failed");
+    }
+  };
+
+  const columns = useMemo(
+    () => [
+      { title: "Email", dataIndex: "email" },
+      { title: "Name", dataIndex: "name" },
+      { title: "Dept", dataIndex: "department" },
+      { title: "Designation", dataIndex: "designation" },
+      { title: "Grade/Level", dataIndex: "grade" },
+      { title: "Cost Center", dataIndex: "costCenter" },
+      { title: "SBU", dataIndex: "sbu" },
+      { title: "Branch", dataIndex: "branch" },
+      {
+        title: "Status",
+        dataIndex: "status",
+        render: (v: string) => (
+          <Tag color={v === "ACTIVE" ? "green" : "red"}>{v || "ACTIVE"}</Tag>
+        ),
+      },
+      {
+        title: "Actions",
+        render: (_: any, r: Emp) => (
+          <Space>
+            <Button size="small" onClick={() => showEdit(r)}>
+              Edit
+            </Button>
+            <Popconfirm title="Delete employee?" onConfirm={() => del(r.id)}>
+              <Button size="small" danger>
+                Delete
+              </Button>
+            </Popconfirm>
+            <Button size="small" onClick={() => showCreateLogin(r)}>
+              Create Login
+            </Button>
+          </Space>
+        ),
+      },
+    ],
+    [rows]
+  );
+
+  const customFieldDefs = (employeeCustomFields as any)?.customFields || [];
+
+  return (
+    <>
+      <Space style={{ marginBottom: 12 }}>
+        <Button type="primary" onClick={showAdd}>
+          Add Employee
+        </Button>
+        <Button onClick={load}>Refresh</Button>
+      </Space>
+
+      <Table rowKey="id" loading={loading} dataSource={rows} columns={columns as any} />
+
+      {/* Employee Create/Edit */}
+      <Modal
+        open={open}
+        title={editing ? "Edit Employee" : "Add Employee"}
+        onCancel={() => setOpen(false)}
+        onOk={save}
+        okText={editing ? "Update" : "Create"}
+        width={820}
+      >
+        <Form form={form} layout="vertical">
+          <Divider orientation="left">Basic</Divider>
+
+          <Space style={{ width: "100%" }} size="middle" wrap>
+            <Form.Item name="email" label="Email" rules={[{ required: true }, { type: "email" }]} style={{ minWidth: 260 }}>
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="name" label="Name" rules={[{ required: true }]} style={{ minWidth: 260 }}>
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="employeeCode" label="Employee Code" style={{ minWidth: 200 }}>
+              <Input placeholder="E10234" />
+            </Form.Item>
+
+            <Form.Item name="mobile" label="Mobile" style={{ minWidth: 200 }}>
+              <Input />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: "100%" }} size="middle" wrap>
+            <Form.Item name="department" label="Department" style={{ minWidth: 200 }}>
+               <Select
+                allowClear
+                placeholder="Select"
+                options={COLUMN_OPTIONS.department.map((x) => ({ value: x, label: x }))}
+              />
+            </Form.Item>
+
+            <Form.Item name="designation" label="Designation" style={{ minWidth: 240 }}>
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="Select"
+                options={COLUMN_OPTIONS.designation.map((x) => ({ value: x, label: x }))}
+              />
+            </Form.Item>
+
+            <Form.Item name="grade" label="Grade" style={{ minWidth: 160 }}>
+                            <Select
+                allowClear
+                placeholder="Select"
+                options={COLUMN_OPTIONS.grade.map((x) => ({ value: x, label: x }))}
+              />
+            </Form.Item>
+
+            <Form.Item name="jobLevel" label="Job Level" style={{ minWidth: 160 }}>
+              <Select
+                allowClear
+                placeholder="L4"
+                options={COLUMN_OPTIONS.jobLevel.map((x) => ({ value: x, label: x }))}
+              />
+            </Form.Item>
+          </Space>
+
+          <Divider orientation="left">Org / Finance</Divider>
+
+          <Space style={{ width: "100%" }} size="middle" wrap>
+            <Form.Item
+              name="employmentType"
+              label="Employment Type"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+                    return COLUMN_OPTIONS.employmentType.includes(value)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(`Allowed: ${COLUMN_OPTIONS.employmentType.join(", ")}`));
+                  },
+                },
+              ]}
+              style={{ minWidth: 220 }}
+            >
+              <Select
+                allowClear
+                placeholder="Permanent"
+                options={COLUMN_OPTIONS.employmentType.map((x) => ({ value: x, label: x }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="costCenter"
+              label="Cost Center"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+                    return COLUMN_OPTIONS.costCenter.includes(value)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(`Allowed: ${COLUMN_OPTIONS.costCenter.join(", ")}`));
+                  },
+                },
+              ]}
+              style={{ minWidth: 220 }}
+            >
+              <Select
+                allowClear
+                placeholder="CC-1001"
+                options={COLUMN_OPTIONS.costCenter.map((x) => ({ value: x, label: x }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="sbu"
+              label="SBU"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+                    return COLUMN_OPTIONS.sbu.includes(value)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(`Allowed: ${COLUMN_OPTIONS.sbu.join(", ")}`));
+                  },
+                },
+              ]}
+              style={{ minWidth: 200 }}
+            >
+              <Select allowClear options={COLUMN_OPTIONS.sbu.map((x) => ({ value: x, label: x }))} />
+            </Form.Item>
+
+            <Form.Item
+              name="branch"
+              label="Branch"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+                    return COLUMN_OPTIONS.branch.includes(value)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(`Allowed: ${COLUMN_OPTIONS.branch.join(", ")}`));
+                  },
+                },
+              ]}
+              style={{ minWidth: 200 }}
+            >
+              <Select allowClear options={COLUMN_OPTIONS.branch.map((x) => ({ value: x, label: x }))} />
+            </Form.Item>
+          </Space>
+
+          <Space style={{ width: "100%" }} size="middle" wrap>
+            <Form.Item
+              name="companyCode"
+              label="Company Code"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+                    return COLUMN_OPTIONS.companyCode.includes(value)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(`Allowed: ${COLUMN_OPTIONS.companyCode.join(", ")}`));
+                  },
+                },
+              ]}
+              style={{ minWidth: 200 }}
+            >
+              <Select allowClear options={COLUMN_OPTIONS.companyCode.map((x) => ({ value: x, label: x }))} />
+            </Form.Item>
+
+            <Form.Item
+              name="legalEntity"
+              label="Legal Entity"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve();
+                    return COLUMN_OPTIONS.legalEntity.includes(value)
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(`Allowed: ${COLUMN_OPTIONS.legalEntity.join(", ")}`));
+                  },
+                },
+              ]}
+              style={{ minWidth: 320 }}
+            >
+              <Select allowClear options={COLUMN_OPTIONS.legalEntity.map((x) => ({ value: x, label: x }))} />
+            </Form.Item>
+
+            <Form.Item name="managerId" label="Manager" style={{ minWidth: 320 }}>
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="Select manager (optional)"
+                options={managerUsers.map((u) => ({
+                  value: u.employeeId || "",
+                  label: `${u.employeeName || u.email} (${u.email}) - ${u.role}`,
+                }))}
+              />
+            </Form.Item>
+
+            <Form.Item name="status" label="Status" rules={[{ required: true }]} style={{ minWidth: 180 }}>
+              <Select
+                options={[
+                  { value: "ACTIVE", label: "ACTIVE" },
+                  { value: "INACTIVE", label: "INACTIVE" },
+                ]}
+              />
+            </Form.Item>
+          </Space>
+
+          <Divider orientation="left">Custom Fields</Divider>
+
+          {/* Render configured custom fields */}
+          <Space style={{ width: "100%" }} size="middle" wrap>
+            {customFieldDefs.map((f: any) => {
+              const key = f.key as string;
+              const label = f.label || key;
+              const type = f.type || "text";
+              const opts: string[] = f.options || [];
+
+              if (type === "select") {
+                return (
+                  <Form.Item key={key} name={["customFields", key]} label={label} style={{ minWidth: 260 }}>
+                    <Select allowClear options={opts.map((x) => ({ value: x, label: x }))} />
+                  </Form.Item>
+                );
+              }
+              if (type === "multi") {
+                return (
+                  <Form.Item key={key} name={["customFields", key]} label={label} style={{ minWidth: 320 }}>
+                    <Select mode="multiple" allowClear options={opts.map((x) => ({ value: x, label: x }))} />
+                  </Form.Item>
+                );
+              }
+              if (type === "boolean") {
+                return (
+                  <Form.Item
+                    key={key}
+                    label={label}
+                    name="cashAdvanceAllowedSwitch"
+                    valuePropName="checked"
+                    style={{ minWidth: 260 }}
+                  >
+                    <Switch />
+                  </Form.Item>
+                );
+              }
+              return (
+                <Form.Item key={key} name={["customFields", key]} label={label} style={{ minWidth: 260 }}>
+                  <Input />
+                </Form.Item>
+              );
+            })}
+          </Space>
+
+          <Collapse
+            style={{ marginTop: 8 }}
+            items={[
+              {
+                key: "adv",
+                label: "Advanced: Custom Fields JSON",
+                children: (
+                  <Form.Item
+                    name="advancedCustomFieldsJson"
+                    label="Custom Fields (JSON)"
+                    rules={[
+                      {
+                        validator: async (_, value) => {
+                          try {
+                            JSON.parse(value || "{}");
+                            return Promise.resolve();
+                          } catch {
+                            return Promise.reject(new Error("Invalid JSON"));
+                          }
+                        },
+                      },
+                    ]}
+                  >
+                    <Input.TextArea rows={6} />
+                  </Form.Item>
+                ),
+              },
+            ]}
+          />
+        </Form>
+      </Modal>
+
+      {/* Create Login */}
+      <Modal
+        open={loginOpen}
+        title={loginFor ? `Create Login for ${loginFor.email}` : "Create Login"}
+        onCancel={() => setLoginOpen(false)}
+        onOk={createLogin}
+        okText="Create"
+        width={520}
+      >
+        <Form form={loginForm} layout="vertical">
+          <Form.Item name="email" label="Email" rules={[{ required: true }, { type: "email" }]}>
+            <Input disabled />
+          </Form.Item>
+          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: "EMPLOYEE", label: "EMPLOYEE" },
+                { value: "APPROVER", label: "APPROVER" },
+                { value: "FINANCE", label: "FINANCE" },
+                { value: "TENANT_ADMIN", label: "TENANT_ADMIN" },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item name="password" label="Password" rules={[{ required: true, min: 6 }]}>
+            <Input.Password />
+          </Form.Item>
+          <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+            <Select
+              options={[
+                { value: "ACTIVE", label: "ACTIVE" },
+                { value: "INACTIVE", label: "INACTIVE" },
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+}
