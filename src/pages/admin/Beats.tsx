@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./Beats.css";
 import { useNavigate } from "react-router-dom";
+import api from "../../lib/api";
 
 const data = [
     "SENTHIL B2026-03-26",
@@ -11,14 +12,38 @@ const data = [
     "Pushparaj2026-03-20",
 ];
 
-
+interface Event {
+    start_date_time: string;
+    name: string;
+    event_counts: string;
+    display_name: string;
+}
 
 export default function Beats() {
     const [search, setSearch] = useState("");
+    const [events, setEvents] = useState<Event[]>([]);
     const navigate = useNavigate();
 
-    const filtered = data.filter(item =>
-        item.toLowerCase().includes(search.toLowerCase())
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const response = await api.get("api/events/get-event-counts-by-each-date");
+                if (response?.data?.status == 'success') {
+                    setEvents(response.data.data);
+                }
+                console.log(response, 'oooooo')
+
+            } catch (error) {
+                console.error("Error fetching events:", error);
+            }
+        };
+
+        fetchEvents();
+    }, []);
+
+
+    const filtered = events.filter(item =>
+        item.display_name.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -60,10 +85,11 @@ export default function Beats() {
                         <div
                             key={i}
                             className="sf-row"
-                            onClick={() => navigate(`/admin/beats/${item}`)}
+                            // onClick={() => navigate(`/admin/beats/${item?.display_name}`)}
+                            onClick={() => navigate(`/app/beats/${item?.display_name?.split(" ")[0]}`)}
                         >
                             <input type="checkbox" onClick={(e) => e.stopPropagation()} />
-                            <span className="sf-link">{item}</span>
+                            <span className="sf-link">{item?.display_name || " "}</span>
                             <span className="sf-menu">⋯</span>
                         </div>
                     ))}

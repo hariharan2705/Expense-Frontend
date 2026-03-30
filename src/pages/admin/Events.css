@@ -122,10 +122,20 @@
     border: none;
 }
 
+.btn-checkin:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .btn-checkout {
     background: #ef4444;
     color: #fff;
     padding: 6px 12px;
     border-radius: 6px;
     border: none;
+}
+
+.btn-checkout:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

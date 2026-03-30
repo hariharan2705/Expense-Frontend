@@ -18,6 +18,8 @@ import {
   UserOutlined,
   LogoutOutlined,
   DollarOutlined,
+  CalendarOutlined,
+  ScheduleOutlined
 } from "@ant-design/icons";
 
 import api from "../../lib/api";
@@ -29,6 +31,9 @@ import UserHome from "./UserHome";
 import ClaimsPage from "./ClaimsPage";
 import ProfilePage from "./ProfilePage";
 import FinancePaymentsPage from "./FinancePaymentsPage";
+import CalendarView from "../events/Calendar";
+import Beats from "../admin/Beats";
+import EventDetail from "../admin/Events";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -60,6 +65,8 @@ export default function UserApp({ onLogout }: { onLogout: () => void }) {
   const selectedKey = useMemo(() => {
     if (loc.pathname.startsWith("/app/claims")) return "claims";
     if (loc.pathname.startsWith("/app/finance")) return "finance";
+    if (loc.pathname.startsWith("/app/events")) return "events";
+    if (loc.pathname.startsWith("/app/beats")) return "beats";
     return "home";
   }, [loc.pathname]);
 
@@ -94,6 +101,8 @@ export default function UserApp({ onLogout }: { onLogout: () => void }) {
     () => [
       { key: "home", icon: <HomeOutlined />, label: "Home" },
       { key: "claims", icon: <FileTextOutlined />, label: "Expense Claims" },
+      { key: "events", icon: <CalendarOutlined />, label: "Events" },
+      { key: "beats", icon: <ScheduleOutlined />, label: "Beats" },
       ...(role === "FINANCE"
         ? [{ key: "finance", icon: <DollarOutlined />, label: "Finance Payments" }]
         : []),
@@ -105,6 +114,8 @@ export default function UserApp({ onLogout }: { onLogout: () => void }) {
     if (key === "home") nav("/app");
     if (key === "claims") nav("/app/claims");
     if (key === "finance") nav("/app/finance");
+    if (key === "events") nav("/app/events");
+    if (key === "beats") nav("/app/beats");
     setMobileNavOpen(false);
   };
 
@@ -240,6 +251,9 @@ export default function UserApp({ onLogout }: { onLogout: () => void }) {
               <Route path="claims" element={<ClaimsPage />} />
               <Route path="finance" element={<FinancePaymentsPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="events" element={<CalendarView />} />
+              <Route path="beats" element={<Beats />} />
+              <Route path="beats/:id" element={<EventDetail />} />
               <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>
           </div>

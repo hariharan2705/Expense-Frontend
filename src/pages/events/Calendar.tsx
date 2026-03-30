@@ -80,7 +80,8 @@ export default function CalendarView() {
     const calRef: any = useRef(null);
     const [events, setEvents]: any = useState(INITIAL_EVENTS);
     const [modal, setModal]: any = useState(null); // { mode: "create"|"edit"|"view", data? }
-    const [form, setForm]: any = useState(emptyForm());
+    
+    const [form, setForm]: any = useState(tstObj);
     const [view, setView] = useState("timeGridWeek");
 
     const [availableUsers, setAvailableUsers]: any = useState([]);

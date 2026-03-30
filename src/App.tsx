@@ -12,8 +12,6 @@ import PoliciesPage from "./pages/admin/PoliciesPage";
 import TenantConfigPage from "./pages/admin/TenantConfigPage";
 
 import CalendarView from "./pages/events/Calendar";
-import Beats from "./pages/admin/Beats";
-import EventDetail from "./pages/admin/Events";
 
 import { setAuthToken, setTenant } from "./lib/api";
 
@@ -62,6 +60,8 @@ export default function App() {
           }
         />
 
+
+
         {/* 🔁 ROOT REDIRECT */}
         <Route
           path="/"
@@ -99,8 +99,8 @@ export default function App() {
 
           <Route path="calendar" element={<CalendarView />} />
 
-          <Route path="beats" element={<Beats />} />
-          <Route path="beats/:id" element={<EventDetail />} />
+          {/* <Route path="beats" element={<Beats />} /> */}
+          {/* <Route path="beats/:id" element={<EventDetail />} /> */}
         </Route>
 
         {/* 👤 USER APP */}
