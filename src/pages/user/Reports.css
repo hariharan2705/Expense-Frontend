@@ -1,0 +1,136 @@
+/* container */
+.reports-container {
+    padding: 24px;
+    background: linear-gradient(180deg, #f8fbff 0%, #edf3ff 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+/* header */
+.reports-header h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.reports-header p {
+    margin: 4px 0 16px;
+    color: #475569;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+}
+
+/* FILTER CARD */
+.filters-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #dbe3f0;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.filters-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* filters layout */
+.filters-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* summary grid */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+/* summary box */
+.summary-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid #eef2f7;
+    transition: 0.2s;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.summary-box:hover {
+    border-color: #c6d2e7;
+}
+
+.summary-value {
+    font-size: 26px;
+    color: #1e293b;
+}
+
+.summary-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* text */
+.summary-label {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+/* table card */
+.table-card {
+    background: #fff;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+}
+
+/* segmented polish */
+.ant-segmented {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.ant-segmented-item-selected {
+    background: #fff !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* responsive */
+@media (max-width: 900px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Optional: Soften the card edges */
+.ant-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+}
+
+.ant-statistic-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}

@@ -1,0 +1,72 @@
+.metrics-section {
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
+    margin-bottom: 16px;
+}
+
+.metric-card-wrapper .ant-col {
+    display: flex;
+}
+
+.metric-card-wrapper .ant-col>div {
+    width: 100%;
+}
+
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.bento-grid .bento {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bento-grid .bento:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+}
+
+.bento-grid .bento .bento-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #52606d;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+}
+
+.bento-grid .bento .bento-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.bento-grid .bento .bento-sub {
+    font-size: 12px;
+    color: #64748b;
+}
+
+@media (max-width: 900px) {
+    .bento-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .bento-grid {
+        grid-template-columns: 1fr;
+    }
+}
