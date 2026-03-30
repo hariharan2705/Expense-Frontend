@@ -5,6 +5,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import "./Calendar.css";
 import api from "../../lib/api";
+import { Select } from "antd";
 
 /* ── Event types — add / remove / recolor freely ─────────── */
 const EVENT_TYPES = [
@@ -65,7 +66,8 @@ const emptyForm = () => ({
     purpose: "",
     checkoutComments: "",
     nextVisitDate: "",
-    nextAction: ""
+    nextAction: "",
+    assignedTo: "",
 });
 
 const INITIAL_EVENTS = [
@@ -80,20 +82,22 @@ export default function CalendarView() {
     const calRef: any = useRef(null);
     const [events, setEvents]: any = useState(INITIAL_EVENTS);
     const [modal, setModal]: any = useState(null); // { mode: "create"|"edit"|"view", data? }
-    
+
     const [form, setForm]: any = useState(tstObj);
     const [view, setView] = useState("timeGridWeek");
-
+    const [employees, setEmployees]: any = useState([]);
     const [availableUsers, setAvailableUsers]: any = useState([]);
 
     useEffect(() => {
         const fetchEmployees = async () => {
             try {
-                const response = await api.get("api/users");
+                const response = await api.get("api/events/get-available-employees-to-invite");
                 console.log(response, "response from employees");
 
-                if (response?.data?.items) {
-                    setAvailableUsers(response.data.items?.filter((emp: any) => emp.employeeName != ""));
+                if (response?.data?.status == 'success') {
+                    const filteredData = response.data.data?.filter((emp: any) => emp.name != "");
+                    setAvailableUsers(filteredData);
+                    setEmployees(filteredData);
                 }
             } catch (err) {
                 console.error("Failed to fetch employees", err);
@@ -361,6 +365,24 @@ export default function CalendarView() {
                                                 onChange={(e) => patch("title", e.target.value)}
                                             />
                                         </div>
+                                        <div className="form-field form-full">
+                                            <label className="form-label">Assigned To</label>
+
+                                            <select
+                                                className="form-input"
+                                               
+                                                value={form.assignedTo}
+                                                onChange={(e) => patch("assignedTo", e.target.value)}
+                                            > 
+                                                <option value="">Select Lead</option>
+                                                {employees?.map((user: any) => (
+                                                    <option key={user.id} value={user.id}>
+                                                        {user.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                        </div>
 
                                         <div className="form-field">
                                             <label className="form-label">Start Date</label>
@@ -455,7 +477,7 @@ export default function CalendarView() {
                                                         }}
                                                     >
 
-                                                        {user.employeeName}
+                                                        {user.name}
                                                     </div>
 
                                                 ))}
@@ -498,7 +520,7 @@ export default function CalendarView() {
                                                         }}
                                                     >
 
-                                                        {user.employeeName}
+                                                        {user.name}
                                                     </div>
 
                                                 ))}
