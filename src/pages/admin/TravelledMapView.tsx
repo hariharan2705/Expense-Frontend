@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyCtdA5MNA7rw-DQfh1KKFlA-s-PjmohdOQ";
 
 // ─── Mock Visualforce remoting (replace with real API calls) ──────────────────
 const mockGetUsers = () =>
