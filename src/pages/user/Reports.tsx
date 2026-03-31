@@ -12,7 +12,8 @@ import {
     Statistic,
     Segmented,
     Empty,
-    Space
+    Space,
+    message
 } from "antd";
 import {
     FilterOutlined,
@@ -25,7 +26,7 @@ import {
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import api from "../../lib/api";
-
+import * as XLSX from 'xlsx';
 dayjs.extend(isBetween);
 
 const { Title, Text } = Typography;
@@ -41,9 +42,15 @@ const fmtCurrency = (n: number) =>
 export default function ReportsPage() {
     const [loading, setLoading] = useState(true);
     const [claims, setClaims] = useState<any[]>([]);
-    const [range, setRange] = useState<any>(null);
     const [status, setStatus] = useState<string | undefined>();
-
+    const [startDate, setStartDate] = useState<string | null>(null);
+    const [endDate, setEndDate] = useState<string | null>(null);
+    useEffect(() => {
+        if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
+            message.error("End date cannot be earlier than start date");
+            setEndDate(null); // Reset the invalid date
+        }
+    }, [startDate, endDate]);
     const load = async () => {
         setLoading(true);
         try {
@@ -62,13 +69,23 @@ export default function ReportsPage() {
 
     const filtered = useMemo(() => {
         return claims.filter((c) => {
+            // 1. Filter by Status
             const matchStatus = !status || c.status === status;
-            const matchDate = range
-                ? dayjs(c.createdAt).isBetween(range[0], range[1], 'day', "[]")
+
+            // 2. Filter by Date Range
+            const claimDate = dayjs(c.createdAt);
+
+            const matchStart = startDate
+                ? claimDate.isAfter(dayjs(startDate).subtract(1, 'day'), 'day')
                 : true;
-            return matchStatus && matchDate;
+
+            const matchEnd = endDate
+                ? claimDate.isBefore(dayjs(endDate).add(1, 'day'), 'day')
+                : true;
+
+            return matchStatus && matchStart && matchEnd;
         });
-    }, [claims, range, status]);
+    }, [claims, startDate, endDate, status]); // Updated dependencies
 
     const summary = useMemo(() => {
         const approved = filtered.filter((c) => c.status === "APPROVED");
@@ -115,6 +132,31 @@ export default function ReportsPage() {
         },
     ];
 
+    const handleDownload = () => {
+        if (!filtered || filtered.length === 0) {
+            message.warning("No data available to export. Please adjust your filters.");
+            return;
+        }
+        // 1. Prepare the data (Optional: Map the data to have clean headers)
+        const dataToExport = filtered.map(item => ({
+            "ID": item.id,
+            "Employee Name": item.employeeName, // Adjust based on your data keys
+            "Amount": item.amount,
+            "Status": item.status,
+            "Date": item.createdAt ? dayjs(item.createdAt).format('YYYY-MM-DD') : 'N/A'
+        }));
+
+        // 2. Create a worksheet
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+        // 3. Create a workbook and add the worksheet
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Claims Report");
+
+        // 4. Generate the Excel file and trigger download
+        XLSX.writeFile(workbook, `Claims_Report_${dayjs().format('YYYY-MM-DD')}.xlsx`);
+    };
+
     if (loading) return <Spin fullscreen tip="Generating insights..." />;
 
     return (
@@ -156,16 +198,52 @@ export default function ReportsPage() {
             </Row>
 
             {/* --- FILTERS & TABLE --- */}
-            <Card bordered={false} title={<Space><FilterOutlined /><span>Filters</span></Space>}>
-                <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 20 }}>
-                    <Col xs={24} md={12}>
-                        <RangePicker
-                            style={{ width: '100%' }}
-                            value={range}
-                            onChange={setRange}
+            <Card
+                bordered={false}
+                title={
+                    <Space>
+                        <FilterOutlined />
+                        <span>Filters</span>
+                    </Space>
+                }
+                extra={
+                    <button className="btn-download" onClick={handleDownload}>
+                        Download
+                    </button>
+                }
+            >
+                <Row gutter={[16, 16]} align="middle" justify="space-between" style={{ marginBottom: 20 }}>
+
+                    {/* Start Date */}
+                    <Col xs={24} md={5}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#8c8c8c' }}>From</label>
+                        <input
+                            type="date"
+                            className="ant-input"
+                            style={{ width: "100%", height: "32px", borderRadius: "6px", border: "1px solid #d9d9d9", padding: "4px 11px" }}
+                            value={startDate || ""}
+                            // PREVENT picking a start date that is AFTER the end date
+                            max={endDate || ""}
+                            onChange={(e) => setStartDate(e.target.value)}
                         />
                     </Col>
-                    <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+
+                    {/* End Date */}
+                    <Col xs={24} md={5}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#8c8c8c' }}>To</label>
+                        <input
+                            type="date"
+                            className="ant-input"
+                            style={{ width: "100%", height: "32px", borderRadius: "6px", border: "1px solid #d9d9d9", padding: "4px 11px" }}
+                            value={endDate || ""}
+                            // PREVENT picking an end date that is BEFORE the start date
+                            min={startDate || ""}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </Col>
+
+                    {/* Status & Reset - Pushed to the right */}
+                    <Col xs={24} md={14} style={{ textAlign: 'right' }}>
                         <Space wrap>
                             <Segmented
                                 options={[
@@ -177,11 +255,17 @@ export default function ReportsPage() {
                                 value={status || "ALL"}
                                 onChange={(v) => setStatus(v === "ALL" ? undefined : v)}
                             />
-                            <Button type="link" onClick={() => { setRange(null); setStatus(undefined); }}>
-                                Reset Filters
+                            <Button type="link"
+                                onClick={() => {
+                                    setStartDate(null);
+                                    setEndDate(null);
+                                    setStatus(undefined);
+                                }}>
+                                Reset
                             </Button>
                         </Space>
                     </Col>
+
                 </Row>
 
                 <Table

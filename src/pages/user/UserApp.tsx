@@ -161,15 +161,26 @@ export default function UserApp({ onLogout }: { onLogout: () => void }) {
         borderRight: "1px solid rgba(255,255,255,0.06)",
       }}    >
       <div style={{
-        padding: collapsed ? 12 : 20,
+        // padding: collapsed ? 12 : 20,
+        padding: collapsed ? 0 : 20,
         display: "flex",
         alignItems: "center",
         justifyContent: collapsed ? "center" : "flex-start",
         gap: 10,
       }}>
-        <img src={exproIcon} style={{ height: 32 }} />
+        <img
+          src={exproLogo}
+          style={{
+            height: collapsed ? 24 : 32,
+            width: "auto",
+            maxWidth: collapsed ? 70 : 120,
+            objectFit: "contain",
+          }}
+          alt="InfoCareer"
+        />
 
         {!collapsed && (
+          
           <span style={{
             color: "#fff",
             fontWeight: 700,

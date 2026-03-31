@@ -1,3 +1,6 @@
+.ant-picker-dropdown {
+  z-index: 9999 !important;
+}
 /* container */
 .reports-container {
     padding: 24px;
@@ -133,4 +136,17 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
+}
+
+.btn-download {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-download:hover {
+  background-color: #1d4ed8;
 }

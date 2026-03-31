@@ -14,7 +14,7 @@ export default function Sidebar() {
     return (
         <Sider width={220} style={{ background: "#0f172a", minHeight: "100vh" }}>
             <div style={{ color: "#fff", padding: 20, fontWeight: 700 }}>
-                💼 ExpensePro
+                InfoCareer
             </div>
 
             <Menu
